@@ -168,6 +168,73 @@ pygame.font.init()
 font = pygame.font.SysFont("Arial", 32,)
 
 
+class Cell:
+    def __init__(self,r,c,width):
+        self.r,self.c,self.width = r,c,width
+        self.x = self.c*self.width
+        self.y = self.r*self.width
+        self.color_gray = 0
+        self.color_rgb = (0,0,0)
+        
+    def show(self,win,update=False):
+        pygame.draw.rect(win,self.color_rgb,(self.x,self.y,self.width,self.width))
+        if update:
+            pygame.display.flip()
+        
+    def update_color(self,new_gray):
+        self.color_gray = new_gray
+        self.color_rgb = (self.color_gray,)*3
+        
+    def add_color(self,gray):
+        self.color_gray = min(self.color_gray+gray,255)
+        self.color_rgb = (self.color_gray,)*3
+
+        
+class Grid:
+    def __init__(self,rows,cols,width):
+        self.width = width
+        self.rows,self.cols = rows,cols
+        self.cell_width = self.width/self.rows
+        self.grid = [[Cell(r,c,self.cell_width) for c in range(self.cols)] for r in range(self.rows)]
+        
+    def show(self,win):
+        win.fill(0)
+        for row in self.grid:
+            for cell in row:
+                cell.show(win)
+                
+        pygame.display.update()
+        
+    def update(self,pos):
+        x,y = pos
+        r,c = int(y/self.cell_width),int(x/self.cell_width)
+        c_to_add = 100
+        
+        neighbors = [(r+1,c),(r-1,c),(r,c+1),(r,c-1)]
+        self.grid[r][c].add_color(c_to_add)
+        
+        for neighbor in neighbors:
+            if self.rows>neighbor[0]>=0 and self.cols>neighbor[1]>=0:
+                self.grid[neighbor[0]][neighbor[1]].add_color(10)
+                
+        neighbors = [(r+1,c+1),(r-1,c-1),(r-1,c+1),(r+1,c-1)]
+        for neighbor in neighbors:
+            if self.rows>neighbor[0]>=0 and self.cols>neighbor[1]>=0:
+                self.grid[neighbor[0]][neighbor[1]].add_color(2)
+              
+              
+    def clear(self):
+        for row in self.grid:
+            for cell in row:
+                cell.update_color(0)
+                
+                
+    def get(self):
+        return [[cell.color_gray/255 for cell in row]for row in self.grid]
+        
+        
+        
+
 def draw_image(win, image):
     win.fill(0)
     image = (
@@ -245,6 +312,9 @@ def apply_filters(image):
 
 
 def predict_drawing(model, images):
+    # images.shape = (n,28,28,1)
+    print(images.shape)
+    
     probabilities = model.predict(
         images
     ).flatten()  # probabilities will be [[0.1,0.85,0.03,....]]
@@ -257,9 +327,16 @@ def main(model):
 
     run = True
     prev_mouse = (0, 0)
-    draw_image(win, dummy_set[0].reshape(28, 28) / 255)
+    draw_image(win, dummy_set[0].reshape(DIM,DIM) / 255)
+    
+    grid = Grid(DIM,DIM,DIM**2)
+    grid.show(win)
+    
+    fps = -1
+    clock = pygame.time.Clock()
     
     while run:
+        clock.tick(fps)
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 run = False
@@ -268,18 +345,15 @@ def main(model):
             if e.type == pygame.KEYDOWN:
                 # clear
                 if e.key == pygame.K_c:
-                    win.fill(0)
-                    pygame.display.update()
+                    grid.clear()
+                    grid.show(win)
 
                 # predict
                 if e.key == pygame.K_RETURN:
-                    pixels = get_pixels(win)
-                    new_image = apply_filters(pixels)
-
-                    draw_image(win, new_image)
-
+                    pixels = np.array([grid.get()]).reshape((1,DIM,DIM,1))
+                    
                     prediction, confidence, probabilities = predict_drawing(
-                        model, new_image
+                        model, pixels
                     )
                     print(
                         f"Predicted: {prediction}| probability: {confidence}   {probabilities}"
@@ -289,8 +363,10 @@ def main(model):
         # draw
         if pygame.mouse.get_pressed()[0]:  # left mouse
             pos = pygame.mouse.get_pos()
-            pygame.draw.line(win, (255, 255, 255), prev_mouse, pos, 50)
-            pygame.display.flip()
+            grid.update(pos)
+            grid.show(win)
+            # pygame.draw.line(win, (255, 255, 255), prev_mouse, pos, 50)
+            # pygame.display.flip()
 
         # erase
         if pygame.mouse.get_pressed()[2]:  # right mouse
