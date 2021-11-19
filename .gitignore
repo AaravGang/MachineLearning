@@ -1,0 +1,6 @@
+.DS_Store
+.idea/
+data/
+data_sets/
+__pycache__/
+doodle_completor/
