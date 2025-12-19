@@ -4,12 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pygame
 import cv2
+import math
 
 # dataset of handwritten digits
 # comes in as ((train_x,train_y),(test_x,test_y))
 mnist = keras.datasets.mnist.load_data()
 train_data, test_data = mnist
-print(train_data)
 train_images, train_labels = train_data
 test_images, test_labels = test_data
 
@@ -131,7 +131,7 @@ def predict(model, test_features):
 # load the model from a saved version, or create one
 def load_model(saved=True, features=None, labels=None):
     if saved:
-        return keras.models.load_model("digit_classification/digit_classifier")
+        return keras.models.load_model("digit_classifier")
     
     model = create_model()
     fit(model, features, labels, save=True)
@@ -252,7 +252,7 @@ def predict_drawing(win, screen_dim, center_img_dim, n_rows, model):
 
 def main():
     model = load_model(saved=True, features=train_images, labels=train_labels)
-    # score(model, test_images, test_labels)
+    score(model, test_images, test_labels)
     
     # screen constants
     n_rows = IMAGE_DIM
@@ -279,11 +279,12 @@ def main():
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_SPACE:
                     prediction = predict_drawing(win, screen_dim, center_img_dim, n_rows, model)
-                    print("predicted: ", prediction[0].numpy())
+                    
+                    print("predicted: ", prediction[0].numpy(), "probability: ",prediction[1])
 
-                    text = font.render(f'Predicted: {prediction[0].numpy()}', True, Colors.BLACK,Colors.CYAN)
+                    text = font.render(f'Predicted: {prediction[0].numpy()} Confidence: {math.trunc(prediction[1].flatten()[prediction[0].numpy()]*100)}%', True, Colors.BLACK,Colors.CYAN)
                     textRect = text.get_rect()
-                    textRect.center = (screen_dim // 2, 100)
+                    textRect.center = (screen_dim // 2, 50)
                     win.blit(text,textRect)
                     pygame.display.update()
                 

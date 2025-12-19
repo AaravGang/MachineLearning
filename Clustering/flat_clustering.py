@@ -39,7 +39,7 @@ def cluster_points():
     clf = KMeans(n_clusters=3)
     clf.fit(X)
     labels = clf.labels_
-    cluster_centers = clf.cluster_centers_
+    cluster_centers = clf.cluster_centers_ # centroids
     print(centroids,"####",cluster_centers)
     
     colors = ["g", "b", "y", "k", "m", "r"]

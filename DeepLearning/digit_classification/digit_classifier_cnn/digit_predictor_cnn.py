@@ -2,7 +2,10 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
-import pygame, cv2, copy, pickle
+import pygame
+import cv2
+import copy
+import pickle
 import pandas as pd
 
 NUM_CLASSES = 10  # 0-9
@@ -17,20 +20,22 @@ with open("data/1st_three", "rb") as f:
 def load_data():
     train_dataset = pd.read_csv("data/emnist-digits-train.csv", )
     train_labels = train_dataset.values[:, 0]  # the first column is the labels
-    
+
     # reshape into format that the cnn wants. Each image comes in as a linear array of 784 gray values
     # transpose, cuz x and y of this thing is messed up - or mine maybe...
-    train_set = train_dataset.values[:, 1:].reshape(-1, 28, 28, 1).transpose(0, 2, 1, 3)
-    
+    train_set = train_dataset.values[:,
+                                     1:].reshape(-1, 28, 28, 1).transpose(0, 2, 1, 3)
+
     test_dataset = pd.read_csv("data/emnist-digits-test.csv")
     test_labels = test_dataset.values[:, 0]
-    test_set = test_dataset.values[:, 1:].reshape(-1, 28, 28, 1).transpose(0, 2, 1, 3)
-    
+    test_set = test_dataset.values[:,
+                                   1:].reshape(-1, 28, 28, 1).transpose(0, 2, 1, 3)
+
     print("Loaded datasets")
     return train_set, train_labels, test_set, test_labels
 
 
-train_set,train_labels,test_set,test_labels = load_data()
+train_set, train_labels, test_set, test_labels = load_data()
 
 
 def view_images(images, labels):
@@ -111,7 +116,7 @@ def create_model():
             ),  # output probabilities
         ]
     )
-    
+
     # compile model
     model.compile(
         loss=tf.keras.losses.SparseCategoricalCrossentropy(),  # research!
@@ -121,25 +126,25 @@ def create_model():
         ),  # gradient descent - research!
         metrics=["accuracy"],  # what do we care about? -iggg
     )
-    
+
     return model
 
 
 def train(model, images, labels, batch_size=100, epochs=3, verbose=1, save=True):
     print("Training...")
-    
+
     # images.shape = (n,28,28,1)
     model.fit(
         images, labels, batch_size=batch_size, epochs=epochs, verbose=verbose,
     )
-    
+
     if save:
         model.save("digit_classifier_cnn")
 
 
 def evaluate(model, images, labels, verbose=1):
     print("Testing...")
-    
+
     # images.shape = (n,28,28,1)
     test_loss, test_acc = model.evaluate(images, labels, verbose=verbose)
     print("Test accuracy:", test_acc, ", Test loss: ", test_loss)
@@ -149,7 +154,7 @@ def evaluate(model, images, labels, verbose=1):
 def load_model(saved=True):
     if saved:
         return keras.models.load_model("digit_classifier_cnn")
-    
+
     return create_model()
 
 
@@ -170,7 +175,7 @@ font = pygame.font.SysFont("Arial", 32, )
 def draw_image(win, image):
     win.fill(0)
     image = (
-            image.reshape(IMAGE_SHAPE) * 255
+        image.reshape(IMAGE_SHAPE) * 255
     )  # image is gray scale image {0,1}, make it {0,255}
     rect_dim = win.get_width() / DIM
     for i in range(DIM):
@@ -178,9 +183,10 @@ def draw_image(win, image):
             pygame.draw.rect(
                 win,
                 (image[j][i],) * 3,
-                (i * rect_dim, j * rect_dim, i * (rect_dim + 1), j * (rect_dim + 1)),
+                (i * rect_dim, j * rect_dim, i *
+                 (rect_dim + 1), j * (rect_dim + 1)),
             )
-    
+
     pygame.display.update()
 
 
@@ -209,8 +215,8 @@ def crop(img):
     coords = cv2.findNonZero(img)  # Find all non-zero points
     x, y, w, h = cv2.boundingRect(coords)  # Find minimum spanning bounding box
     rect = img[
-           y: y + h, x: x + w
-           ]  # Crop the image - note we do this on the original image
+        y: y + h, x: x + w
+    ]  # Crop the image - note we do this on the original image
     return rect
 
 
@@ -227,19 +233,20 @@ def blur(img, t="filter"):
 
 def apply_filters(image):
     cropped = crop(image)  # crop the image and get only the drawing
-    resized_image = get_resized(cropped, (DIM - 4, DIM - 4))  # resize into 20x20
+    resized_image = get_resized(
+        cropped, (DIM - 4, DIM - 4))  # resize into 20x20
     final_resized = np.zeros(IMAGE_SHAPE_2D, dtype=np.float32)
     final_resized[2:-2, 2:-2] = resized_image  # place inside 28x28
-    
+
     blurred = blur(
         final_resized, "gaussian"
     )  # blur the image, to make it like the ones which are in training set
-    
+
     final_images = blurred.reshape(
         1, DIM, DIM, 1
     )  # reshape it to be inside an outer array, as the cnn wants it to be that way
     final_images = final_images / 255  # normalise the values b/w 0 and 1
-    
+
     return final_images
 
 
@@ -248,7 +255,7 @@ def predict_drawing(model, images):
         images
     ).flatten()  # probabilities will be [[0.1,0.85,0.03,....]]
     predicted = np.argmax(probabilities)
-    
+
     return predicted, probabilities[predicted], probabilities
 
 
@@ -256,26 +263,26 @@ def main(model):
     run = True
     prev_mouse = (0, 0)
     draw_image(win, dummy_set[0].reshape(28, 28) / 255)
-    
+
     while run:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 run = False
                 break
-            
+
             if e.type == pygame.KEYDOWN:
                 # clear
                 if e.key == pygame.K_c:
                     win.fill(0)
                     pygame.display.update()
-                
+
                 # predict
                 if e.key == pygame.K_RETURN:
                     pixels = get_pixels(win)
                     new_image = apply_filters(pixels)
-                    
+
                     draw_image(win, new_image)
-                    
+
                     prediction, confidence, probabilities = predict_drawing(
                         model, new_image
                     )
@@ -283,19 +290,19 @@ def main(model):
                         f"Predicted: {prediction}| probability: {confidence}   {probabilities}"
                     )
                     write(win, f"( {prediction}, {confidence} )")
-        
+
         # draw
         if pygame.mouse.get_pressed()[0]:  # left mouse
             pos = pygame.mouse.get_pos()
             pygame.draw.line(win, (255, 255, 255), prev_mouse, pos, 50)
             pygame.display.flip()
-        
+
         # erase
         if pygame.mouse.get_pressed()[2]:  # right mouse
             pos = pygame.mouse.get_pos()
             pygame.draw.line(win, (0, 0, 0), prev_mouse, pos, 50)
             pygame.display.flip()
-        
+
         prev_mouse = pygame.mouse.get_pos()  # set the previous mouse location
 
 

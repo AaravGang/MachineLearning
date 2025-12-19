@@ -52,7 +52,7 @@ if __name__ == '__main__':
     dataset = {"g": [(1, 2), (2, 3), (3, 4)], "r": [(30, 40), (10, 20), (15, 10)]}
     # dataset = pd.DataFrame(dataset)
 
-    new_features = [[100, 0],[0,100],[23,45],[10,10]]
+    new_features = [[100, 0],[0,100],[23,45],[10,10],(0,1)]
      
     classifications= k_nearest_neighbors(dataset,new_features)
     print(classifications)
